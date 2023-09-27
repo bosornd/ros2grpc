@@ -3,8 +3,13 @@ from example_interfaces.srv import AddTwoInts
 import rclpy
 from rclpy.node import Node
 
+from concurrent import futures
 
-class MinimalService(Node):
+import grpc
+from ros2grpc.calc_pb2 import Response
+from ros2grpc.calc_pb2_grpc import AdderServicer, add_AdderServicer_to_server
+
+class MinimalService(Node, AdderServicer):
 
     def __init__(self):
         super().__init__('minimal_service')
@@ -16,13 +21,24 @@ class MinimalService(Node):
 
         return response
 
+    def add(self, request, context):
+        self.get_logger().info('Incoming request through gRPC\na: %d b: %d' % (request.n1, request.n2))
+
+        return Response(r = request.n1 + request.n2)
 
 def main():
     rclpy.init()
 
     minimal_service = MinimalService()
 
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
+    add_AdderServicer_to_server(minimal_service, server)
+
+    server.add_insecure_port('[::]:50050')
+    server.start()
+
     rclpy.spin(minimal_service)
+    server.wait_for_termination()
 
     rclpy.shutdown()
 

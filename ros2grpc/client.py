@@ -4,6 +4,9 @@ from example_interfaces.srv import AddTwoInts
 import rclpy
 from rclpy.node import Node
 
+import grpc
+from ros2grpc.calc_pb2 import Request
+from ros2grpc.calc_pb2_grpc import AdderStub
 
 class MinimalClientAsync(Node):
 
@@ -30,6 +33,14 @@ def main():
     minimal_client.get_logger().info(
         'Result of add_two_ints: for %d + %d = %d' %
         (int(sys.argv[1]), int(sys.argv[2]), response.sum))
+
+    channel = grpc.insecure_channel('localhost:50050')
+    stub = AdderStub(channel)
+    response = stub.add(Request(n1 = int(sys.argv[1]), n2 = int(sys.argv[2])))
+    minimal_client.get_logger().info(
+        'Result of add_two_ints from gRPC server: for %d + %d = %d' %
+        (int(sys.argv[1]), int(sys.argv[2]), response.r))
+
 
     minimal_client.destroy_node()
     rclpy.shutdown()
