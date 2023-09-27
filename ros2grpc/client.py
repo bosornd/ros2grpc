@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 
 from example_interfaces.srv import AddTwoInts
 import rclpy
@@ -29,18 +30,21 @@ def main():
     rclpy.init()
 
     minimal_client = MinimalClientAsync()
-    response = minimal_client.send_request(int(sys.argv[1]), int(sys.argv[2]))
-    minimal_client.get_logger().info(
-        'Result of add_two_ints: for %d + %d = %d' %
-        (int(sys.argv[1]), int(sys.argv[2]), response.sum))
+    start_time = datetime.now()
+    results = [ minimal_client.send_request(i, i + 1).sum for i in range(100) ]
+    time_elasped = datetime.now() - start_time
+
+    print(results)
+    print('time elasped(ROS) : {}'.format(time_elasped))
 
     channel = grpc.insecure_channel('localhost:50050')
     stub = AdderStub(channel)
-    response = stub.add(Request(n1 = int(sys.argv[1]), n2 = int(sys.argv[2])))
-    minimal_client.get_logger().info(
-        'Result of add_two_ints from gRPC server: for %d + %d = %d' %
-        (int(sys.argv[1]), int(sys.argv[2]), response.r))
+    start_time = datetime.now()
+    results = [ stub.add(Request(n1 = i, n2 = i + 1)).r for i in range(100) ]
+    time_elasped = datetime.now() - start_time
 
+    print(results)
+    print('time elasped(gRPC) : {}'.format(time_elasped))
 
     minimal_client.destroy_node()
     rclpy.shutdown()
